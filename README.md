@@ -9,3 +9,4 @@
 	有问题可以Email我:pruidong#gmail.com.
 #<h3>更新</h3>
 2015.11.1   更新工具类.
+2015.12.11 新增加的一个操作数据库的工具：使用Python连接MongoDB.
