@@ -31,10 +31,16 @@ pymongo下载提示页面:
 
 author : prd
 version : 0.9 2015.12.11
+              2015.12.18 修复几个问题:
+                                修改原有的获取数据库名称方式不正确.
+                                修改原有获取数据库集合方式的问题.
+
 email : pruidong#gmail.com
 
 """
 import pymongo
+
+
 
 
 class PyDaoUtil(object):
@@ -54,7 +60,9 @@ class PyDaoUtil(object):
 
     def getDB(self):
         client = self.getClient()
-        return client.self.dbname
+        # 修改原有的获取数据库名称方式不正确. TODO 2015.12.18
+        dbdatabase = client['%s' % (self.dbname)]
+        return dbdatabase
 
     """
     添加数据
@@ -71,9 +79,10 @@ class PyDaoUtil(object):
             db = self.getDB()
             collections = self.collection
             if isinstance(bsonData, list):
-                result = db.collections.insert_many(bsonData)
+                # 修改原有获取数据库集合方式的问题. TODO 2015.12.18 get_collection(collections)
+                result = db.get_collection(collections).insert_many(bsonData)
                 return result.inserted_ids
-            return db.collections.insert_one(bsonData).inserted_id
+            return db.get_collection(collections).insert_one(bsonData).inserted_id
         else:
             return None
 
@@ -92,12 +101,11 @@ class PyDaoUtil(object):
             db = self.getDB()
 
             def deleteOne(self, oneDeleteFilter=None):  # 单个删除
-                print(oneDeleteFilter)
-                result = db.collections.delete_one(oneDeleteFilter)
+                result = db.get_collection(collections).delete_one(oneDeleteFilter)
                 return result.deleted_count
 
             def deleteMany(self, manyDeleteFilter=None):  # 全部删除
-                result = db.collections.delete_many(manyDeleteFilter)
+                result = db.get_collection(collections).delete_many(manyDeleteFilter)
                 return result.deleted_count
 
             onedel = kwargs.get("oneDeleteFilter", "")
@@ -125,11 +133,11 @@ class PyDaoUtil(object):
             db = self.getDB()
 
             def updateOne(self, oneOldData=None, oneUpdate=None):  # 单个更新
-                result = db.collections.update_one(oneOldData, oneUpdate)
+                result = db.get_collection(collections).update_one(oneOldData, oneUpdate)
                 return result.matched_count
 
             def updateMany(self, manyOldData, manyUpdate=None):  # 全部更新
-                result = db.collections.update_many(manyOldData, manyUpdate)
+                result = db.get_collection(collections).update_many(manyOldData, manyUpdate)
                 return result.matched_count
 
             if oldData:
@@ -160,30 +168,30 @@ class PyDaoUtil(object):
 
             def findPage(self, dataLimit=None, dataSkip=None):  # 分页查询数据
                 if dataLimit and isinstance(dataLimit, int):  # limit 最多只显示多少.
-                    return db.collections.find().limit(dataLimit)
+                    return db.get_collection(collections).find().limit(dataLimit)
 
                 if dataSkip and isinstance(dataSkip, int):  # 跳过多少条
-                    return db.collections.find().limit(10).skip(dataSkip)
+                    return db.get_collection(collections).find().limit(10).skip(dataSkip)
 
                 if isinstance(dataLimit, int) and isinstance(dataSkip, int):
-                    return db.collections.find().limit(dataLimit).skip(dataSkip)
+                    return db.get_collection(collections).find().limit(dataLimit).skip(dataSkip)
 
             def findAllData(self, dataQuery=None, dataSortQuery=None):  # 查询数据
                 if dataQuery:
-                    return db.collections.find(dataQuery)
+                    return db.get_collection(collections).find(dataQuery)
                 else:
-                    return db.collections.find()
+                    return db.get_collection(collections).find()
 
                 if dataSortQuery:
-                    return db.collections.find().sort(dataSortQuery)
+                    return db.get_collection(collections).find().sort(dataSortQuery)
                 if dataQuery and dataSortQuery:
-                    return db.collections.find(dataQuery).sort(dataSortQuery)
+                    return db.get_collection(collections).find(dataQuery).sort(dataSortQuery)
 
             def findOneQuery(self, oneDataQuery=None):  # 查询单个数据
-                return db.collections.find_one(oneDataQuery)
+                return db.get_collection(collections).find_one(oneDataQuery)
 
             def findAllDataQuery(self, dataLimit, dataSkip, dataQuery, dataSortQuery):  # 多个条件查询
-                return db.collections.find(dataQuery).limit(dataLimit).skip(dataSkip).sort(dataSortQuery)
+                return db.get_collection(collections).find(dataQuery).limit(dataLimit).skip(dataSkip).sort(dataSortQuery)
 
             if len(kwargs) == 2:
                 limit = kwargs.get('dataLimit', "")
@@ -214,7 +222,7 @@ class PyDaoUtil(object):
         if self.dbname:
             collections = self.collection
             db = self.getDB()
-            return db.collections.aggregate(aggreg)
+            return db.get_collection(collections).aggregate(aggreg)
 
     """
     统计数据库中的数量,
@@ -231,13 +239,13 @@ class PyDaoUtil(object):
             collections = self.collection
             db = self.getDB()
             if countQuery and kwargs:
-                return db.collections.count(countQuery, kwargs)
+                return db.get_collection(collections).count(countQuery, kwargs)
             elif countQuery:
-                return db.collections.count(countQuery)
+                return db.get_collection(collections).count(countQuery)
             elif kwargs:
-                return db.collections.count(filter=None, **kwargs)
+                return db.get_collection(collections).count(filter=None, **kwargs)
             else:
-                return db.collections.count()
+                return db.get_collection(collections).count()
 
     """ 删除集合中所有数据!!!!谨慎调用!!!! """
 
@@ -246,18 +254,17 @@ class PyDaoUtil(object):
             collections = self.collection
             db = self.getDB()
             if dataPassword and isinstance(dataPassword, list):
-                db.collections.drop()
+                db.get_collection(collections).drop()
 
 
 if __name__ == '__main__':
     dao = PyDaoUtil("test", "my_collection")
     # 新增数据.
-    """
     dao.insertData(
         {
             "title": "MongoDB Overview",
             "description": "MongoDB is no sql database",
-            "by": "tutorials point",
+            "by": "百度一下你就知道",
             "url": "http://www.baidu.com",
             "tags": [
                 "mongodb",
@@ -266,37 +273,37 @@ if __name__ == '__main__':
             ],
             "likes": 100
         })#单个新增.
-        print(dao.insertData([{"x": "67"}, {"x": "67"}, {"x": "67"}])) #批量新增.
-    """
+
+    # print(dao.insertData([{"a": "67"}, {"a": "67"}, {"x": "5"}]))  # 批量新增.
+
     # 新增数据.END.
 
     # 查询数据
-    """
-    print([item for item in dao.findAll()])
-    print([item for item in dao.findAll(dataLimit=2, dataSkip=1)])
-    print([item for item in dao.findAll(dataSkip=1)])
-    print([item for item in dao.findAll(dataLimit=2)])
-    print([item for item in dao.findAll(oneDataQuery={"x": "67"})])
-    print([item for item in dao.findAll(dataSortQuery=[("x", "55")])])
-    print([item for item in dao.findAll(dataQuery={"x": "55"}, dataSortQuery=[("x", "55")])])
-    """
+
+    # print(dao.findAll())
+    # print(dao.findAll(dataLimit=2, dataSkip=1))
+    # print(dao.findAll(dataSkip=1))
+    # print(dao.findAll(dataLimit=2))
+    # print(dao.findAll(oneDataQuery={"x": "67"}))
+    # print(dao.findAll(dataSortQuery=[("x", "55")]))
+    # print(dao.findAll(dataQuery={"x": "55"}, dataSortQuery=[("x", "55")]))
+
     # 查询数据END.
 
     # 删除数据
 
-    """
-    print(dao.deleteData(manyDeleteFilter={"x": "67"}))
-    print(dao.deleteData(oneDeleteFilter={"x": "67"}))
-    """
+    # print(dao.deleteData(manyDeleteFilter={"a": "10000"}))
+    # print(dao.deleteData(oneDeleteFilter={"a": "10000"}))
+
 
     # 删除数据END.
 
     # 更新数据
-    """
-    print(dao.insertData([{"a": "67"}, {"a": "67"}, {"x": "5"}]))  # 批量新增.
-    print(dao.updateData(oldData={"x": "5"}, oneUpdate={'$set': {"x": "3"}}))
-    print(dao.updateData(oldData={"x": "67"}, manyUpdate={'$set': {"x": "77"}}))
-    """
+
+    # print(dao.insertData([{"a": "67"}, {"a": "67"}, {"x": "5"}]))  # 批量新增.
+    # print(dao.updateData(oldData={"x": "5"}, oneUpdate={'$set': {"x": "300"}}))
+    # print(dao.updateData(oldData={"a": "67"}, manyUpdate={'$set': {"a": "10000"}}))
+
     # 更新数据END.
 
     # 清除所有数据[不限定条件,直接删除]
@@ -304,13 +311,15 @@ if __name__ == '__main__':
 
     警告:会删除所有数据,请谨慎调用!!!!!!!!!!!!!!!!!!
 
-    dao.dropAllData(dataPassword=[123])
+
     """
     # 清除所有数据END.
-
-    # 查询显示所有数据.
     dao.dropAllData(dataPassword=[123])
+    # 查询显示所有数据.
     print(dao.insertData([{"测试": "测试"}, {"a": "67"}, {"x": "5"}]))
-    print([item for item in dao.findAll()])
+
+    # print(dao.findAll())
     # 获得数据库中一共有多少条数据.
     print(dao.countData())
+    print(dao.countData(countQuery={"a":"10000"}))
+
