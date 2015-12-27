@@ -34,13 +34,34 @@ version : 0.9 2015.12.11
               2015.12.18 修复几个问题:
                                 修改原有的获取数据库名称方式不正确.
                                 修改原有获取数据库集合方式的问题.
+              2015.12.28 修复一个问题:
+                                在查询时,进行分页之前的方式,无法进行正常分页.
+                                之前的错误原因(现在已经修复):满足其一条件将不再往下执行,现在已修改方式.
+                                举例:
+                                    错误的:
+                                        if page:
+                                            pass
+                                        if pageSize:
+                                            pass
+                                        if page and pageSize:
+                                            pass
+                                    # 若传递page和pageSize也无法正常获取数据.因为判断完第一个将不再继续执行.
+
+                                    正确的:
+                                        if page and pageSize:
+                                            pass
+                                        if page:
+                                            pass
+                                        if pageSize:
+                                            pass
+
+
+
 
 email : pruidong#gmail.com
 
 """
 import pymongo
-
-
 
 
 class PyDaoUtil(object):
@@ -167,31 +188,30 @@ class PyDaoUtil(object):
             db = self.getDB()
 
             def findPage(self, dataLimit=None, dataSkip=None):  # 分页查询数据
+                if isinstance(dataLimit, int) and isinstance(dataSkip, int):
+                    return db.get_collection(collections).find().limit(dataLimit).skip(dataSkip)
                 if dataLimit and isinstance(dataLimit, int):  # limit 最多只显示多少.
                     return db.get_collection(collections).find().limit(dataLimit)
 
                 if dataSkip and isinstance(dataSkip, int):  # 跳过多少条
                     return db.get_collection(collections).find().limit(10).skip(dataSkip)
 
-                if isinstance(dataLimit, int) and isinstance(dataSkip, int):
-                    return db.get_collection(collections).find().limit(dataLimit).skip(dataSkip)
-
             def findAllData(self, dataQuery=None, dataSortQuery=None):  # 查询数据
+                if dataQuery and dataSortQuery:  # TODO 修复一个问题:在查询时,进行分页之前的方式,无法进行正常分页.
+                    return db.get_collection(collections).find(dataQuery).sort(dataSortQuery)
                 if dataQuery:
                     return db.get_collection(collections).find(dataQuery)
                 else:
                     return db.get_collection(collections).find()
-
                 if dataSortQuery:
                     return db.get_collection(collections).find().sort(dataSortQuery)
-                if dataQuery and dataSortQuery:
-                    return db.get_collection(collections).find(dataQuery).sort(dataSortQuery)
 
             def findOneQuery(self, oneDataQuery=None):  # 查询单个数据
                 return db.get_collection(collections).find_one(oneDataQuery)
 
             def findAllDataQuery(self, dataLimit, dataSkip, dataQuery, dataSortQuery):  # 多个条件查询
-                return db.get_collection(collections).find(dataQuery).limit(dataLimit).skip(dataSkip).sort(dataSortQuery)
+                return db.get_collection(collections).find(dataQuery).limit(dataLimit).skip(dataSkip).sort(
+                    dataSortQuery)
 
             if len(kwargs) == 2:
                 limit = kwargs.get('dataLimit', "")
@@ -199,14 +219,14 @@ class PyDaoUtil(object):
                 query = kwargs.get('dataQuery', "")
                 sortQuery = kwargs.get('dataSortQuery', "")
                 oneDataQuery = kwargs.get("oneDataQuery", "")
-                if limit or skip:
+                if limit and skip and query and sortQuery:
+                    return findAllDataQuery(self, **kwargs)
+                elif limit or skip:
                     return findPage(self, **kwargs)
                 elif query or sortQuery:
                     return findAllData(self, **kwargs)
                 elif oneDataQuery:
                     return findOneQuery(self, **kwargs)
-                elif limit and skip and query and sortQuery:
-                    return findAllDataQuery(self, **kwargs)
             else:
                 return findAllData(self, "", "")
 
@@ -258,21 +278,21 @@ class PyDaoUtil(object):
 
 
 if __name__ == '__main__':
-    dao = PyDaoUtil("test", "my_collection")
-    # 新增数据.
-    dao.insertData(
-        {
-            "title": "MongoDB Overview",
-            "description": "MongoDB is no sql database",
-            "by": "百度一下你就知道",
-            "url": "http://www.baidu.com",
-            "tags": [
-                "mongodb",
-                "database",
-                "NoSQL"
-            ],
-            "likes": 100
-        })#单个新增.
+    # dao = PyDaoUtil("test", "my_collection")
+    # # 新增数据.
+    # dao.insertData(
+    #     {
+    #         "title": "MongoDB Overview",
+    #         "description": "MongoDB is no sql database",
+    #         "by": "百度一下你就知道",
+    #         "url": "http://www.baidu.com",
+    #         "tags": [
+    #             "mongodb",
+    #             "database",
+    #             "NoSQL"
+    #         ],
+    #         "likes": 100
+    #     })#单个新增.
 
     # print(dao.insertData([{"a": "67"}, {"a": "67"}, {"x": "5"}]))  # 批量新增.
 
@@ -314,12 +334,11 @@ if __name__ == '__main__':
 
     """
     # 清除所有数据END.
-    dao.dropAllData(dataPassword=[123])
+    # dao.dropAllData(dataPassword=[123])
     # 查询显示所有数据.
-    print(dao.insertData([{"测试": "测试"}, {"a": "67"}, {"x": "5"}]))
+    # print(dao.insertData([{"测试": "测试"}, {"a": "67"}, {"x": "5"}]))
 
     # print(dao.findAll())
     # 获得数据库中一共有多少条数据.
-    print(dao.countData())
-    print(dao.countData(countQuery={"a":"10000"}))
-
+    # print(dao.countData())
+    # print(dao.countData(countQuery={"a":"10000"}))
