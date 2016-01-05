@@ -54,6 +54,10 @@ version : 0.9 2015.12.11
                                             pass
                                         if pageSize:
                                             pass
+              2016.1.6 更新:
+                                 优化查询方式,简化原有代码结构.此处使用了find()方法.原有方式不再使用.但兼容原有数据.
+                                并增加一项功能:设定返回列,或排除返回列.
+                                更多细节:http://api.mongodb.org/python/current/api/pymongo/collection.html?highlight=find#pymongo.collection.Collection.find
 
 
 
@@ -178,7 +182,11 @@ class PyDaoUtil(object):
     dataSkip  - > 跳过多少条.
     dataQuery - > 查询限定条件
     dataSortQuery -> 排序条件
-    oneDataQuery -> 查询单条条件
+    dataProjection ->  返回指定的列或者排除指定的列
+
+    ----------------------------------------------------------------
+
+    oneDataQuery -> 查询单条条件 -- 弃用!!!!
 
     """
 
@@ -187,48 +195,19 @@ class PyDaoUtil(object):
             collections = self.collection
             db = self.getDB()
 
-            def findPage(self, dataLimit=None, dataSkip=None):  # 分页查询数据
-                if isinstance(dataLimit, int) and isinstance(dataSkip, int):
-                    return db.get_collection(collections).find().limit(dataLimit).skip(dataSkip)
-                if dataLimit and isinstance(dataLimit, int):  # limit 最多只显示多少.
-                    return db.get_collection(collections).find().limit(dataLimit)
+            def findAllDataQuery(self, dataLimit=None, dataSkip=0, dataQuery=None, dataSortQuery=None,
+                                 dataProjection=None):
+                '''
+                TODO :
+                    2016.1.6 更新:
+                         优化查询方式,简化原有代码结构.此处使用了find()方法.原有方式不再使用.但兼容原有数据.
+                         并增加一项功能:设定返回列,或排除返回列.
+                         更多细节:http://api.mongodb.org/python/current/api/pymongo/collection.html?highlight=find#pymongo.collection.Collection.find
+                '''
+                return db.get_collection(collections).find(filter=dataQuery, projection=dataProjection, skip=dataSkip,
+                                                           limit=dataLimit, sort=dataSortQuery)
 
-                if dataSkip and isinstance(dataSkip, int):  # 跳过多少条
-                    return db.get_collection(collections).find().limit(10).skip(dataSkip)
-
-            def findAllData(self, dataQuery=None, dataSortQuery=None):  # 查询数据
-                if dataQuery and dataSortQuery:  # TODO 修复一个问题:在查询时,进行分页之前的方式,无法进行正常分页.
-                    return db.get_collection(collections).find(dataQuery).sort(dataSortQuery)
-                if dataQuery:
-                    return db.get_collection(collections).find(dataQuery)
-                else:
-                    return db.get_collection(collections).find()
-                if dataSortQuery:
-                    return db.get_collection(collections).find().sort(dataSortQuery)
-
-            def findOneQuery(self, oneDataQuery=None):  # 查询单个数据
-                return db.get_collection(collections).find_one(oneDataQuery)
-
-            def findAllDataQuery(self, dataLimit, dataSkip, dataQuery, dataSortQuery):  # 多个条件查询
-                return db.get_collection(collections).find(dataQuery).limit(dataLimit).skip(dataSkip).sort(
-                    dataSortQuery)
-
-            if len(kwargs) == 2:
-                limit = kwargs.get('dataLimit', "")
-                skip = kwargs.get('dataSkip', "")
-                query = kwargs.get('dataQuery', "")
-                sortQuery = kwargs.get('dataSortQuery', "")
-                oneDataQuery = kwargs.get("oneDataQuery", "")
-                if limit and skip and query and sortQuery:
-                    return findAllDataQuery(self, **kwargs)
-                elif limit or skip:
-                    return findPage(self, **kwargs)
-                elif query or sortQuery:
-                    return findAllData(self, **kwargs)
-                elif oneDataQuery:
-                    return findOneQuery(self, **kwargs)
-            else:
-                return findAllData(self, "", "")
+            return findAllDataQuery(self, **kwargs)
 
     """
     聚合函数.
