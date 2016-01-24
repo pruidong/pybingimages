@@ -58,9 +58,9 @@ version : 0.9 2015.12.11
                                  优化查询方式,简化原有代码结构.此处使用了find()方法.原有方式不再使用.但兼容原有数据.
                                 并增加一项功能:设定返回列,或排除返回列.
                                 更多细节:http://api.mongodb.org/python/current/api/pymongo/collection.html?highlight=find#pymongo.collection.Collection.find
-
-
-
+              2016.1.10 v2.0.0 更新:
+                                    为更新操作,新增参数(可选,若文档不存在时,是否进行新增).
+                                    查询时的参数:dataLimit,修改默认为0(之前默认为None会导致错误!).
 
 email : pruidong#gmail.com
 
@@ -148,7 +148,11 @@ class PyDaoUtil(object):
     关键字参数:
 
     oneUpdate->单条更新
+    oneUpsert->True:如果文档不存在,执行插入.
+               (默认)False:如果文档不存在不执行执行操作.
     manyUpdate->多条更新(如果过滤条件结果存在多条)
+    manUpsert->True:如果文档不存在,执行插入.
+               (默认)False:如果文档不存在不执行执行操作.
 
     """
 
@@ -157,12 +161,12 @@ class PyDaoUtil(object):
             collections = self.collection
             db = self.getDB()
 
-            def updateOne(self, oneOldData=None, oneUpdate=None):  # 单个更新
-                result = db.get_collection(collections).update_one(oneOldData, oneUpdate)
+            def updateOne(self, oneOldData=None, oneUpdate=None,oneUpsert=False):  # 单个更新
+                result = db.get_collection(collections).update_one(filter=oneOldData,update=oneUpdate,upsert=oneUpsert)
                 return result.matched_count
 
-            def updateMany(self, manyOldData, manyUpdate=None):  # 全部更新
-                result = db.get_collection(collections).update_many(manyOldData, manyUpdate)
+            def updateMany(self, manyOldData, manyUpdate=None,manUpsert=False):  # 全部更新
+                result = db.get_collection(collections).update_many(filter=manyOldData,update=manyUpdate,upsert=manUpsert)
                 return result.matched_count
 
             if oldData:
@@ -195,7 +199,7 @@ class PyDaoUtil(object):
             collections = self.collection
             db = self.getDB()
 
-            def findAllDataQuery(self, dataLimit=None, dataSkip=0, dataQuery=None, dataSortQuery=None,
+            def findAllDataQuery(self, dataLimit=0, dataSkip=0, dataQuery=None, dataSortQuery=None,
                                  dataProjection=None):
                 '''
                 TODO :
