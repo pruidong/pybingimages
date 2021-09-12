@@ -60,9 +60,8 @@ version : 0.9 2015.12.11
                                 更多细节:http://api.mongodb.org/python/current/api/pymongo/collection.html?highlight=find#pymongo.collection.Collection.find
               2016.1.10 v2.0.0 更新:
                                     为更新操作,新增参数(可选,若文档不存在时,是否进行新增).
-                                    查询时的参数:dataLimit,修改默认为0(之前默认为None会导致错误!).
+                                    更新dataLimit默认值为0(原来为None,若未传递此参数会导致异常.)  
 
-email : pruidong#gmail.com
 
 """
 import pymongo
@@ -79,7 +78,7 @@ class PyDaoUtil(object):
     """ 返回MongoDB客户端对象. """
 
     def getClient(self):
-        return pymongo.MongoClient("localhost", 27017)
+        return pymongo.MongoClient("localhost", 27017,username="python",password="python")
 
     """ 返回MongoDB的一个数据库 """
 
